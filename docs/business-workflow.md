@@ -240,7 +240,129 @@ graph LR
 
 ---
 
-## 8. Business Rules สำคัญ
+## 8. AR Aging & Credit Collection Workflow
+
+```mermaid
+flowchart TD
+    A([Invoice ถึงกำหนดชำระ]) --> B[ระบบคำนวณ AR Aging\nทุกวันอัตโนมัติ]
+    B --> C{เกินกำหนดกี่วัน?}
+    C -- 1-7 วัน --> D[แจ้งเตือนอัตโนมัติ\nEmail / LINE ลูกค้า]
+    C -- 8-30 วัน --> E[แจ้ง Sales Rep\nให้ติดตามโดยตรง]
+    C -- 31-60 วัน --> F[Manager รับทราบ\nส่ง Demand Letter]
+    C -- 60+ วัน --> G[Block Credit\nห้าม SO ใหม่]
+    D --> H{ลูกค้าชำระ?}
+    E --> H
+    F --> H
+    G --> I[ส่งเรื่องให้ Legal\nพิจารณาดำเนินการ]
+    H -- ใช่ --> J[รับ Payment\nAllocate → Invoice]
+    H -- ไม่ --> K[Escalate ขึ้น Level ถัดไป]
+    J --> L{ชำระครบ?}
+    L -- ครบ --> M[Unblock Credit อัตโนมัติ]
+    L -- บางส่วน --> N[อัปเดต amount_due\nติดตามต่อ]
+    M --> O([จบ])
+    N --> B
+```
+
+---
+
+## 9. Credit Block / Unblock Workflow
+
+```mermaid
+flowchart TD
+    A([Trigger: AR เกิน 60 วัน\nหรือ Credit Limit เกิน]) --> B[ระบบ Block Customer อัตโนมัติ]
+    B --> C[บันทึก AUDIT_LOG\nแจ้ง Sales Rep + Manager]
+    C --> D{มี SO Draft ค้างอยู่?}
+    D -- ใช่ --> E[Hold SO — ห้าม Confirm]
+    D -- ไม่ --> F[รอการชำระ]
+    E --> F
+    F --> G{ลูกค้าชำระหนี้ค้าง?}
+    G -- ไม่ --> F
+    G -- ใช่ --> H[Finance ยืนยันการรับเงิน]
+    H --> I{Credit ยังไม่เกิน Limit?}
+    I -- เกิน --> J[Manager ปรับ Credit Limit\nหรือขอ Deposit]
+    I -- ไม่เกิน --> K[Unblock Customer]
+    J --> K
+    K --> L[แจ้ง Sales Rep\nสามารถ Process SO ได้]
+    L --> M([จบ])
+```
+
+---
+
+## 10. Stock Take / Physical Count Workflow
+
+```mermaid
+flowchart TD
+    A([กำหนดวันนับสต็อก]) --> B[Warehouse Manager\nสร้าง Stock Count Sheet]
+    B --> C[Lock การเบิก-จ่ายชั่วคราว\nระหว่างนับ]
+    C --> D[ทีม Warehouse นับจริง\nบันทึกผลทีละ SKU]
+    D --> E[ระบบเปรียบเทียบ\nนับจริง vs ระบบ]
+    E --> F{มี Discrepancy?}
+    F -- ไม่มี --> G[ยืนยัน Stock ถูกต้อง]
+    F -- มี --> H{Variance เกิน Threshold?}
+    H -- ไม่เกิน --> I[บันทึก Minor Adjustment\nอัตโนมัติ]
+    H -- เกิน --> J[สอบสวนหาสาเหตุ\nขาด / เกิน / เสียหาย]
+    J --> K{หาสาเหตุได้?}
+    K -- ได้ --> L[บันทึกสาเหตุ\nรับผิดชอบตามนโยบาย]
+    K -- ไม่ได้ --> M[Manager อนุมัติ\nForce Adjustment]
+    L --> N[Stock Adjustment\nอัปเดต qty_on_hand]
+    M --> N
+    I --> N
+    G --> O[Unlock การเบิก-จ่าย]
+    N --> O
+    O --> P([จบ])
+```
+
+---
+
+## 11. Product Review Workflow
+
+```mermaid
+flowchart TD
+    A([ลูกค้าได้รับสินค้า\nสถานะ Delivered]) --> B[ระบบส่งคำขอ Review\nEmail / LINE / App]
+    B --> C{ลูกค้า Review?}
+    C -- ไม่ --> D[ส่งอีกครั้งหลัง 3 วัน\nmax 2 ครั้ง]
+    D --> C
+    C -- ใช่ --> E[กรอก Rating 1-5 ดาว\n+ Comment]
+    E --> F{Rating < 3?}
+    F -- ใช่ --> G[แจ้ง Customer Service\nให้ติดต่อกลับ]
+    G --> H[บันทึก Complaint\nติดตามแก้ไข]
+    F -- ไม่ --> I[ระบบ Pending Approve]
+    H --> I
+    I --> J[Admin ตรวจสอบ Review]
+    J --> K{ผ่านมาตรฐาน?}
+    K -- ไม่ --> L[Reject + แจ้งเหตุผล]
+    K -- ใช่ --> M[Publish Review]
+    M --> N[อัปเดต Product Rating Average]
+    N --> O([จบ])
+```
+
+---
+
+## 12. Price List Management Workflow
+
+```mermaid
+flowchart TD
+    A([ต้องการปรับราคา]) --> B{ที่มาของการปรับ}
+    B -- ต้นทุนขึ้น --> C[Purchasing แจ้ง\nCost เปลี่ยน]
+    B -- กลยุทธ์การตลาด --> D[Marketing เสนอ\nราคาใหม่]
+    B -- Promotion ชั่วคราว --> E[สร้าง Promotion\nกำหนด valid_from/to]
+    C --> F[สร้าง Price List ใหม่\nกำหนด valid_from]
+    D --> F
+    F --> G[Manager / MD อนุมัติ]
+    G --> H{อนุมัติ?}
+    H -- ไม่ --> I[แก้ไขและส่งใหม่]
+    I --> G
+    H -- ใช่ --> J[Activate Price List ใหม่\nDeactivate ของเก่า]
+    E --> K[Activate Promotion]
+    J --> L[แจ้ง Sales Rep\nผ่าน Notification]
+    K --> L
+    L --> M[ระบบดึงราคาใหม่\nอัตโนมัติทุก SO/POS]
+    M --> N([จบ])
+```
+
+---
+
+## 13. Business Rules สำคัญ
 
 | Rule | รายละเอียด |
 |------|-----------|
@@ -251,3 +373,8 @@ graph LR
 | Return Window | กำหนดวันคืนสินค้าตามนโยบาย (เช่น 7 วัน) — ตรวจสอบอัตโนมัติ |
 | POS Session | Cashier ต้อง Open/Close Session ทุกวัน — ยอดเงินสดต้องตรงกับระบบ |
 | AR Aging | Invoice เกินกำหนดชำระ → แจ้งเตือน Sales Rep → Block Credit |
+| LOT/Batch | สินค้าอุปโภคบริโภคต้องระบุ Lot + Expiry Date — FIFO จ่ายของเก่าก่อน |
+| Audit Trail | ทุก action (create/update/approve) บันทึก AUDIT_LOG — ย้อนดูได้ทุก step |
+| Review Gate | ลูกค้า Review ได้เฉพาะ Order ที่ Delivered แล้วเท่านั้น — 1 Order 1 Review |
+| Loyalty Earn | ทุกการซื้อ 1 บาท = 1 Point — แลกได้เมื่อครบ 500 Point |
+| RBAC | ทุก User มี Role — ระบบ enforce permission ทุก endpoint ไม่มี bypass |

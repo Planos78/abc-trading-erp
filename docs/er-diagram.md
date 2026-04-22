@@ -341,6 +341,116 @@ erDiagram
     enum     status "draft | posted | partial | paid | overdue"
   }
 
+  %% ─── AUTH & RBAC ──────────────────────────────────────────
+  ROLE {
+    int    id PK
+    string name "admin | manager | cashier | sales_rep | warehouse | purchasing | viewer"
+    string description
+  }
+  USER {
+    int    id PK
+    int    employee_id FK
+    string username UK
+    string password_hash
+    int    role_id FK
+    bool   is_active
+    datetime last_login
+  }
+  AUDIT_LOG {
+    int      id PK
+    int      user_id FK
+    string   entity_type
+    int      entity_id
+    string   action "create | update | delete | approve | reject"
+    json     old_value
+    json     new_value
+    datetime created_at
+    string   ip_address
+  }
+
+  %% ─── PAYMENT TERM ──────────────────────────────────────────
+  PAYMENT_TERM {
+    int    id PK
+    string name "immediate | net_7 | net_15 | net_30 | net_60 | net_90"
+    int    days
+    string description
+  }
+
+  %% ─── TAX ──────────────────────────────────────────────────
+  TAX_RATE {
+    int     id PK
+    string  name "VAT 7% | Exempt | Zero-rated"
+    decimal rate
+    bool    is_active
+  }
+
+  %% ─── PRODUCT EXTENSIONS ────────────────────────────────────
+  PRODUCT_UNIT_CONVERSION {
+    int     id PK
+    int     product_id FK
+    string  from_uom
+    string  to_uom
+    decimal factor
+  }
+  LOT {
+    int     id PK
+    int     product_id FK
+    string  lot_number UK
+    date    manufacture_date
+    date    expiry_date
+    int     warehouse_id FK
+    decimal qty_on_hand
+  }
+
+  %% ─── PROMOTION EXTENSION ───────────────────────────────────
+  PROMOTION_ITEM {
+    int  id PK
+    int  promotion_id FK
+    int  product_id FK
+    int  category_id FK
+  }
+
+  %% ─── LOYALTY POINTS ─────────────────────────────────────────
+  LOYALTY_POINT {
+    int      id PK
+    int      customer_id FK
+    int      points_balance
+    datetime updated_at
+  }
+  LOYALTY_TRANSACTION {
+    int      id PK
+    int      customer_id FK
+    int      order_id FK
+    enum     type "earn | redeem | expire | adjust"
+    int      points
+    datetime created_at
+    string   note
+  }
+
+  %% ─── PRODUCT REVIEW ─────────────────────────────────────────
+  PRODUCT_REVIEW {
+    int      id PK
+    int      product_id FK
+    int      customer_id FK
+    int      order_id FK
+    int      rating "1-5"
+    string   comment
+    enum     status "pending | approved | rejected"
+    datetime created_at
+  }
+
+  %% ─── NOTIFICATION ───────────────────────────────────────────
+  NOTIFICATION {
+    int      id PK
+    int      user_id FK
+    string   title
+    string   body
+    enum     channel "in_app | email | sms | line"
+    enum     type "low_stock | overdue_invoice | credit_block | order_status | system"
+    bool     is_read
+    datetime created_at
+  }
+
   %% ─── RELATIONSHIPS ──────────────────────────────────────
 
   CUSTOMER             ||--o{ CUSTOMER_ADDRESS    : "has"
@@ -398,4 +508,32 @@ erDiagram
   GOODS_RECEIPT        ||--o{ GOODS_RECEIPT_LINE  : "contains"
   WAREHOUSE            ||--o{ GOODS_RECEIPT       : "receives at"
   PURCHASE_ORDER       ||--o{ VENDOR_BILL         : "billed"
+  GOODS_RECEIPT        ||--o| VENDOR_BILL         : "3-way match"
+  INVOICE              ||--o| CREDIT_NOTE         : "credited"
+
+  ROLE                 ||--o{ USER                : "assigned"
+  EMPLOYEE             ||--o| USER                : "linked"
+  USER                 ||--o{ AUDIT_LOG           : "performs"
+
+  PAYMENT_TERM         ||--o{ CUSTOMER            : "applies"
+  PAYMENT_TERM         ||--o{ VENDOR              : "applies"
+  TAX_RATE             ||--o{ SALES_ORDER_LINE    : "taxed"
+
+  PRODUCT              ||--o{ PRODUCT_UNIT_CONVERSION : "converts"
+  PRODUCT              ||--o{ LOT                 : "batched"
+  WAREHOUSE            ||--o{ LOT                 : "stored"
+
+  PROMOTION            ||--o{ PROMOTION_ITEM      : "targets"
+  PRODUCT              ||--o{ PROMOTION_ITEM      : "in promo"
+  PRODUCT_CATEGORY     ||--o{ PROMOTION_ITEM      : "in promo"
+
+  CUSTOMER             ||--o| LOYALTY_POINT       : "earns"
+  CUSTOMER             ||--o{ LOYALTY_TRANSACTION : "records"
+  SALES_ORDER          ||--o{ LOYALTY_TRANSACTION : "triggers"
+
+  PRODUCT              ||--o{ PRODUCT_REVIEW      : "reviewed"
+  CUSTOMER             ||--o{ PRODUCT_REVIEW      : "writes"
+  SALES_ORDER          ||--o{ PRODUCT_REVIEW      : "from order"
+
+  USER                 ||--o{ NOTIFICATION        : "receives"
 ```

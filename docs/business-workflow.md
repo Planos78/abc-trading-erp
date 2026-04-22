@@ -362,7 +362,63 @@ flowchart TD
 
 ---
 
-## 13. Business Rules สำคัญ
+## 13. Stock Transfer Workflow
+
+```mermaid
+flowchart TD
+    A([ต้องการโอนสินค้าระหว่างคลัง]) --> B[Warehouse Manager\nสร้าง Transfer Request]
+    B --> C[ระบุ: สินค้า / จำนวน / คลังต้นทาง / คลังปลายทาง]
+    C --> D{Stock พร้อมที่คลังต้นทาง?}
+    D -- ไม่พอ --> E[แจ้งเตือน — ยกเลิกหรือปรับจำนวน]
+    D -- พอ --> F[Manager อนุมัติ Transfer]
+    F --> G[Reserve Stock ที่คลังต้นทาง]
+    G --> H[จัดส่งภายใน / รถขนส่ง]
+    H --> I[คลังปลายทางรับสินค้า\nตรวจนับจำนวน]
+    I --> J{จำนวนตรง?}
+    J -- ไม่ตรง --> K[บันทึก Discrepancy\nแจ้งต้นทาง]
+    J -- ตรง --> L[สร้าง Stock Movement\nOUT ที่ต้นทาง / IN ที่ปลายทาง]
+    L --> M[อัปเดต qty_on_hand ทั้ง 2 คลัง]
+    M --> N([จบ])
+```
+
+---
+
+## 14. Reporting & Dashboard
+
+```mermaid
+flowchart LR
+    subgraph "Sales Reports"
+        S1[ยอดขายแยกช่องทาง\nPOS / Sales Rep / E-commerce]
+        S2[Top 10 สินค้าขายดี]
+        S3[ยอดขายแยก Sales Rep]
+        S4[Conversion Rate\nQuotation → Order]
+    end
+
+    subgraph "Inventory Reports"
+        I1[Stock On Hand ทุกคลัง]
+        I2[สินค้าใกล้หมดอายุ\nLOT Expiry Alert]
+        I3[Stock Movement History]
+        I4[Slow-Moving Items]
+    end
+
+    subgraph "Finance Reports"
+        F1[AR Aging Report\nแยก 0-30 / 31-60 / 61-90 / 90+]
+        F2[AP Outstanding]
+        F3[Cash Flow Summary]
+        F4[Revenue by Period]
+    end
+
+    subgraph "Operations Reports"
+        O1[Delivery Performance\nOn-time vs Late]
+        O2[Return Rate by Product]
+        O3[POS Session Summary]
+        O4[Purchase vs Sales\nGross Margin]
+    end
+```
+
+---
+
+## 15. Business Rules สำคัญ
 
 | Rule | รายละเอียด |
 |------|-----------|

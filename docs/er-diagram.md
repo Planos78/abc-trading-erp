@@ -1,6 +1,8 @@
 # ERP System — ABC Trading Co.
 ## Part 1: ER Diagram
 
+> ดู Interactive Diagram ที่ [dbdiagram.io](https://dbdiagram.io/d) — copy content จาก [schema.dbml](schema.dbml) แล้ว paste
+
 ```mermaid
 erDiagram
 

@@ -1,0 +1,458 @@
+// ABC Trading ERP — paste ที่ https://dbdiagram.io
+
+Table customer {
+  id integer [pk, increment]
+  customer_code varchar [unique]
+  customer_type varchar [note: 'retail | wholesale']
+  name varchar
+  tax_id varchar
+  credit_limit decimal
+  payment_term_id integer [ref: > payment_term.id]
+  price_tier varchar [note: 'A | B | C']
+  status varchar [note: 'active | inactive | blacklisted']
+}
+
+Table customer_address {
+  id integer [pk, increment]
+  customer_id integer [ref: > customer.id]
+  address_type varchar [note: 'billing | shipping | both']
+  address varchar
+  district varchar
+  province varchar
+  postal_code varchar
+  is_default boolean
+}
+
+Table customer_contact {
+  id integer [pk, increment]
+  customer_id integer [ref: > customer.id]
+  name varchar
+  phone varchar
+  email varchar
+  position varchar
+}
+
+Table role {
+  id integer [pk, increment]
+  name varchar [note: 'admin | manager | cashier | sales_rep | warehouse | purchasing | viewer']
+  description varchar
+}
+
+Table user {
+  id integer [pk, increment]
+  employee_id integer [ref: - employee.id]
+  username varchar [unique]
+  password_hash varchar
+  role_id integer [ref: > role.id]
+  is_active boolean
+  last_login datetime
+}
+
+Table audit_log {
+  id integer [pk, increment]
+  user_id integer [ref: > user.id]
+  entity_type varchar
+  entity_id integer
+  action varchar [note: 'create | update | delete | approve | reject']
+  old_value json
+  new_value json
+  created_at datetime
+  ip_address varchar
+}
+
+Table employee {
+  id integer [pk, increment]
+  employee_code varchar [unique]
+  name varchar
+  department varchar
+  position varchar
+  sales_territory varchar
+}
+
+Table sales_team {
+  id integer [pk, increment]
+  name varchar
+  manager_id integer [ref: > employee.id]
+}
+
+Table sales_team_member {
+  id integer [pk, increment]
+  team_id integer [ref: > sales_team.id]
+  employee_id integer [ref: > employee.id]
+}
+
+Table product_category {
+  id integer [pk, increment]
+  code varchar [unique]
+  name varchar
+  parent_id integer [ref: > product_category.id]
+}
+
+Table product {
+  id integer [pk, increment]
+  sku varchar [unique]
+  barcode varchar
+  name varchar
+  category_id integer [ref: > product_category.id]
+  uom varchar
+  cost decimal
+  status varchar [note: 'active | discontinued']
+}
+
+Table product_unit_conversion {
+  id integer [pk, increment]
+  product_id integer [ref: > product.id]
+  from_uom varchar
+  to_uom varchar
+  factor decimal
+}
+
+Table lot {
+  id integer [pk, increment]
+  product_id integer [ref: > product.id]
+  lot_number varchar [unique]
+  manufacture_date date
+  expiry_date date
+  warehouse_id integer [ref: > warehouse.id]
+  qty_on_hand decimal
+}
+
+Table price_list {
+  id integer [pk, increment]
+  name varchar
+  customer_type varchar [note: 'retail | wholesale | all']
+  channel varchar [note: 'POS | SALESREP | ECOMMERCE | ALL']
+  valid_from date
+  valid_to date
+  is_active boolean
+}
+
+Table price_list_item {
+  id integer [pk, increment]
+  price_list_id integer [ref: > price_list.id]
+  product_id integer [ref: > product.id]
+  unit_price decimal
+  min_qty decimal
+}
+
+Table promotion {
+  id integer [pk, increment]
+  code varchar [unique]
+  name varchar
+  promo_type varchar [note: 'percent | fixed | buy_x_get_y']
+  value decimal
+  min_order_amount decimal
+  valid_from date
+  valid_to date
+  applicable_channel varchar [note: 'POS | SALESREP | ECOMMERCE | ALL']
+  is_active boolean
+}
+
+Table promotion_item {
+  id integer [pk, increment]
+  promotion_id integer [ref: > promotion.id]
+  product_id integer [ref: > product.id]
+  category_id integer [ref: > product_category.id]
+}
+
+Table tax_rate {
+  id integer [pk, increment]
+  name varchar [note: 'VAT 7% | Exempt | Zero-rated']
+  rate decimal
+  is_active boolean
+}
+
+Table payment_term {
+  id integer [pk, increment]
+  name varchar [note: 'immediate | net_7 | net_15 | net_30 | net_60 | net_90']
+  days integer
+  description varchar
+}
+
+Table warehouse {
+  id integer [pk, increment]
+  code varchar [unique]
+  name varchar
+  warehouse_type varchar [note: 'main | branch | virtual']
+}
+
+Table stock {
+  id integer [pk, increment]
+  product_id integer [ref: > product.id]
+  warehouse_id integer [ref: > warehouse.id]
+  qty_on_hand decimal
+  qty_reserved decimal
+  qty_available decimal
+}
+
+Table stock_movement {
+  id integer [pk, increment]
+  product_id integer [ref: > product.id]
+  warehouse_id integer [ref: > warehouse.id]
+  movement_type varchar [note: 'IN | OUT | TRANSFER | ADJUST']
+  qty decimal
+  reference_id integer
+  reference_type varchar
+  moved_at datetime
+}
+
+Table sales_channel {
+  id integer [pk, increment]
+  code varchar [unique]
+  name varchar
+  channel_type varchar [note: 'POS | SALESREP | ECOMMERCE']
+}
+
+Table quotation {
+  id integer [pk, increment]
+  quote_number varchar [unique]
+  customer_id integer [ref: > customer.id]
+  channel_id integer [ref: > sales_channel.id]
+  sales_rep_id integer [ref: > employee.id]
+  quote_date date
+  valid_until date
+  status varchar [note: 'draft | sent | accepted | rejected | expired']
+  subtotal decimal
+  discount_amount decimal
+  tax_amount decimal
+  total decimal
+  converted_order_id integer [ref: > sales_order.id]
+}
+
+Table sales_order {
+  id integer [pk, increment]
+  order_number varchar [unique]
+  customer_id integer [ref: > customer.id]
+  channel_id integer [ref: > sales_channel.id]
+  sales_rep_id integer [ref: > employee.id]
+  quotation_id integer [ref: > quotation.id]
+  order_date date
+  requested_delivery_date date
+  payment_term_id integer [ref: > payment_term.id]
+  status varchar [note: 'draft | confirmed | picking | shipped | invoiced | closed | cancelled']
+  subtotal decimal
+  discount_amount decimal
+  tax_amount decimal
+  total decimal
+}
+
+Table sales_order_line {
+  id integer [pk, increment]
+  order_id integer [ref: > sales_order.id]
+  product_id integer [ref: > product.id]
+  tax_rate_id integer [ref: > tax_rate.id]
+  qty_ordered decimal
+  qty_delivered decimal
+  unit_price decimal
+  discount_pct decimal
+  line_total decimal
+}
+
+Table pos_terminal {
+  id integer [pk, increment]
+  code varchar [unique]
+  name varchar
+  warehouse_id integer [ref: > warehouse.id]
+}
+
+Table pos_session {
+  id integer [pk, increment]
+  terminal_id integer [ref: > pos_terminal.id]
+  cashier_id integer [ref: > employee.id]
+  open_time datetime
+  close_time datetime
+  opening_cash decimal
+  closing_cash decimal
+  status varchar [note: 'open | closed']
+}
+
+Table pos_transaction {
+  id integer [pk, increment]
+  session_id integer [ref: > pos_session.id]
+  order_id integer [ref: > sales_order.id]
+  transaction_number varchar [unique]
+  payment_method varchar [note: 'cash | credit_card | transfer | qr']
+  amount_tendered decimal
+  change_amount decimal
+  paid_at datetime
+}
+
+Table delivery_order {
+  id integer [pk, increment]
+  delivery_number varchar [unique]
+  order_id integer [ref: > sales_order.id]
+  warehouse_id integer [ref: > warehouse.id]
+  driver_id integer [ref: > employee.id]
+  delivery_date date
+  status varchar [note: 'pending | in_transit | delivered | failed']
+}
+
+Table delivery_line {
+  id integer [pk, increment]
+  delivery_id integer [ref: > delivery_order.id]
+  order_line_id integer [ref: > sales_order_line.id]
+  product_id integer [ref: > product.id]
+  qty_delivered decimal
+}
+
+Table invoice {
+  id integer [pk, increment]
+  invoice_number varchar [unique]
+  order_id integer [ref: > sales_order.id]
+  customer_id integer [ref: > customer.id]
+  invoice_date date
+  due_date date
+  status varchar [note: 'draft | posted | partial | paid | overdue | cancelled']
+  total decimal
+  amount_paid decimal
+  amount_due decimal
+}
+
+Table payment {
+  id integer [pk, increment]
+  payment_number varchar [unique]
+  customer_id integer [ref: > customer.id]
+  payment_date date
+  payment_method varchar [note: 'cash | bank_transfer | cheque | credit_card | qr']
+  amount decimal
+  reference_no varchar
+  status varchar [note: 'draft | confirmed | reconciled']
+}
+
+Table payment_allocation {
+  id integer [pk, increment]
+  payment_id integer [ref: > payment.id]
+  invoice_id integer [ref: > invoice.id]
+  allocated_amount decimal
+}
+
+Table return_order {
+  id integer [pk, increment]
+  return_number varchar [unique]
+  original_order_id integer [ref: > sales_order.id]
+  customer_id integer [ref: > customer.id]
+  return_date date
+  reason varchar
+  status varchar [note: 'pending | approved | rejected | completed']
+}
+
+Table return_order_line {
+  id integer [pk, increment]
+  return_id integer [ref: > return_order.id]
+  product_id integer [ref: > product.id]
+  qty_returned decimal
+  refund_unit_price decimal
+}
+
+Table credit_note {
+  id integer [pk, increment]
+  cn_number varchar [unique]
+  return_id integer [ref: > return_order.id]
+  invoice_id integer [ref: > invoice.id]
+  customer_id integer [ref: > customer.id]
+  cn_date date
+  amount decimal
+  status varchar [note: 'draft | posted | applied | cancelled']
+}
+
+Table vendor {
+  id integer [pk, increment]
+  vendor_code varchar [unique]
+  name varchar
+  tax_id varchar
+  payment_term_id integer [ref: > payment_term.id]
+  credit_limit decimal
+  status varchar [note: 'active | inactive']
+}
+
+Table purchase_order {
+  id integer [pk, increment]
+  po_number varchar [unique]
+  vendor_id integer [ref: > vendor.id]
+  buyer_id integer [ref: > employee.id]
+  order_date date
+  expected_date date
+  status varchar [note: 'draft | sent | confirmed | partial | received | closed | cancelled']
+  subtotal decimal
+  tax_amount decimal
+  total decimal
+}
+
+Table purchase_order_line {
+  id integer [pk, increment]
+  po_id integer [ref: > purchase_order.id]
+  product_id integer [ref: > product.id]
+  qty_ordered decimal
+  qty_received decimal
+  unit_cost decimal
+  line_total decimal
+}
+
+Table goods_receipt {
+  id integer [pk, increment]
+  gr_number varchar [unique]
+  po_id integer [ref: > purchase_order.id]
+  warehouse_id integer [ref: > warehouse.id]
+  receipt_date date
+  status varchar [note: 'draft | validated']
+}
+
+Table goods_receipt_line {
+  id integer [pk, increment]
+  gr_id integer [ref: > goods_receipt.id]
+  po_line_id integer [ref: > purchase_order_line.id]
+  product_id integer [ref: > product.id]
+  qty_received decimal
+}
+
+Table vendor_bill {
+  id integer [pk, increment]
+  bill_number varchar [unique]
+  po_id integer [ref: > purchase_order.id]
+  gr_id integer [ref: > goods_receipt.id]
+  vendor_id integer [ref: > vendor.id]
+  bill_date date
+  due_date date
+  total decimal
+  amount_paid decimal
+  status varchar [note: 'draft | posted | partial | paid | overdue']
+}
+
+Table loyalty_point {
+  id integer [pk, increment]
+  customer_id integer [ref: - customer.id]
+  points_balance integer
+  updated_at datetime
+}
+
+Table loyalty_transaction {
+  id integer [pk, increment]
+  customer_id integer [ref: > customer.id]
+  order_id integer [ref: > sales_order.id]
+  type varchar [note: 'earn | redeem | expire | adjust']
+  points integer
+  created_at datetime
+  note varchar
+}
+
+Table product_review {
+  id integer [pk, increment]
+  product_id integer [ref: > product.id]
+  customer_id integer [ref: > customer.id]
+  order_id integer [ref: > sales_order.id]
+  rating integer [note: '1-5']
+  comment text
+  status varchar [note: 'pending | approved | rejected']
+  created_at datetime
+}
+
+Table notification {
+  id integer [pk, increment]
+  user_id integer [ref: > user.id]
+  title varchar
+  body text
+  channel varchar [note: 'in_app | email | sms | line']
+  type varchar [note: 'low_stock | overdue_invoice | credit_block | order_status | system']
+  is_read boolean
+  created_at datetime
+}

@@ -11,6 +11,7 @@
 | ไฟล์ | รายละเอียด |
 |------|-----------|
 | [docs/er-diagram.md](docs/er-diagram.md) | ER Diagram — โครงสร้างฐานข้อมูลทั้งหมด |
+| [Interactive ER Diagram](https://dbdiagram.io/d/69e88c921bbca033120d41e8) | dbdiagram.io — zoom/pan/คลิก entity ได้ |
 | [docs/business-workflow.md](docs/business-workflow.md) | Business Workflow — กระบวนการทางธุรกิจทุก Module |
 
 ## Module หลัก
